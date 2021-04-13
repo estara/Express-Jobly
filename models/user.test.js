@@ -141,7 +141,7 @@ describe("get", function () {
       lastName: "U1L",
       email: "u1@email.com",
       isAdmin: true,
-      jobs: []
+      jobs: [testIds[0]]
     });
   });
 
@@ -235,8 +235,8 @@ describe("remove", function () {
 
 describe("apply", function () {
   test("works", async function () {
-    const result = await User.apply("u1", testIds[0]);
-    expect(result).toEqual({job_id: testIds[0]});
+    const result = await User.apply("u1", testIds[1]);
+    expect(result).toEqual({job_id: testIds[1]});
   });
 
   test("error on bad request", async function () {
@@ -249,7 +249,6 @@ describe("apply", function () {
 
   test("error on duplicate request", async function () {
     try {
-      await User.apply("u1", testIds[0]);
       await User.apply("u1", testIds[0]);
       fail();
     } catch (err) {

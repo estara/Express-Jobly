@@ -52,6 +52,7 @@ class Company {
    * */
 
   static async findAll(criteria = {}) {
+
     let baseQuery = `SELECT handle,
     name,
     description,
@@ -62,6 +63,7 @@ class Company {
     let values = [];
     const { minEmployees, maxEmployees, name } = criteria;
 
+    // add filter criteria to SQL query
     if (minEmployees !== undefined) {
       values.push(minEmployees);
       fields.push(`num_employees >= $${values.length}`);
@@ -78,6 +80,8 @@ class Company {
       baseQuery += " WHERE " + fields.join(" AND ");
     }
     baseQuery += " ORDER BY name";
+    
+    // run query
     const companiesRes = await db.query(baseQuery, values);
     return companiesRes.rows;
   }
@@ -91,6 +95,7 @@ class Company {
    **/
 
   static async get(handle) {
+    // get company
     const companyRes = await db.query(
           `SELECT handle,
                   name,
@@ -100,6 +105,8 @@ class Company {
            FROM companies
            WHERE handle = $1`,
         [handle]);
+
+  // get jobs for company
     const jobRes = await db.query(
           `SELECT id,
                   title,
@@ -113,8 +120,6 @@ class Company {
     const company = companyRes.rows[0];
     if (!company) {throw new NotFoundError(`No company: ${handle}`);}
     company.jobs = jobRes.rows;
-
-    
 
     return company;
   }
