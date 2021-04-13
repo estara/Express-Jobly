@@ -3,13 +3,18 @@
 const db = require("../db.js");
 const User = require("../models/user");
 const Company = require("../models/company");
+const Job = require("../models/job")
 const { createToken } = require("../helpers/tokens");
+let testIds = []
 
 async function commonBeforeAll() {
   // noinspection SqlWithoutWhere
   await db.query("DELETE FROM users");
   // noinspection SqlWithoutWhere
   await db.query("DELETE FROM companies");
+  // noinspection SqlWithoutWhere
+  await db.query("DELETE FROM jobs");
+
 
   await Company.create(
       {
@@ -17,7 +22,7 @@ async function commonBeforeAll() {
         name: "C1",
         numEmployees: 1,
         description: "Desc1",
-        logoUrl: "http://c1.img",
+        logoUrl: "http://c1.img"
       });
   await Company.create(
       {
@@ -25,7 +30,7 @@ async function commonBeforeAll() {
         name: "C2",
         numEmployees: 2,
         description: "Desc2",
-        logoUrl: "http://c2.img",
+        logoUrl: "http://c2.img"
       });
   await Company.create(
       {
@@ -33,7 +38,7 @@ async function commonBeforeAll() {
         name: "C3",
         numEmployees: 3,
         description: "Desc3",
-        logoUrl: "http://c3.img",
+        logoUrl: "http://c3.img"
       });
 
   await User.register({
@@ -42,7 +47,7 @@ async function commonBeforeAll() {
     lastName: "U1L",
     email: "user1@user.com",
     password: "password1",
-    isAdmin: false,
+    isAdmin: true
   });
   await User.register({
     username: "u2",
@@ -50,7 +55,7 @@ async function commonBeforeAll() {
     lastName: "U2L",
     email: "user2@user.com",
     password: "password2",
-    isAdmin: false,
+    isAdmin: false
   });
   await User.register({
     username: "u3",
@@ -58,8 +63,12 @@ async function commonBeforeAll() {
     lastName: "U3L",
     email: "user3@user.com",
     password: "password3",
-    isAdmin: false,
+    isAdmin: false
   });
+
+  testIds[0] = (await Job.create({ title: "j1", salary: 20000, equity: 1, company_handle: "c1" })).id;;
+  testIds[1] = (await Job.create({ title: "j2", salary: 40000, equity: 0, company_handle: "c1" })).id;;
+  testIds[2] = (await Job.create({ title: "j3", salary: 60000, equity: .11, company_handle: "c3" })).id;;
 }
 
 async function commonBeforeEach() {
@@ -75,8 +84,9 @@ async function commonAfterAll() {
 }
 
 
-const u1Token = createToken({ username: "u1", isAdmin: false });
-
+const u1Token = createToken({ username: "u1", isAdmin: true });
+const u2Token = createToken({ username: "u2", isAdmin: false });
+const u3Token = createToken({ username: "u3", isAdmin: false });
 
 module.exports = {
   commonBeforeAll,
@@ -84,4 +94,7 @@ module.exports = {
   commonAfterEach,
   commonAfterAll,
   u1Token,
+  u2Token,
+  u3Token,
+  testIds
 };

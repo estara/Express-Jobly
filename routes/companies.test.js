@@ -11,6 +11,7 @@ const {
   commonAfterEach,
   commonAfterAll,
   u1Token,
+  u2Token
 } = require("./_testCommon");
 
 beforeAll(commonBeforeAll);
@@ -29,7 +30,7 @@ describe("POST /companies", function () {
     numEmployees: 10,
   };
 
-  test("ok for users", async function () {
+  test("ok for admins", async function () {
     const resp = await request(app)
         .post("/companies")
         .send(newCompany)
@@ -49,6 +50,21 @@ describe("POST /companies", function () {
         })
         .set("authorization", `Bearer ${u1Token}`);
     expect(resp.statusCode).toEqual(400);
+  });
+
+  test("doesn't allow users to create", async function () {
+    const resp = await request(app)
+        .post("/companies")
+        .send(newCompany)
+        .set("authorization", `Bearer ${u2Token}`);
+    expect(resp.statusCode).toEqual(401);
+  });
+
+  test("unath for anon", async function () {
+    const resp = await request(app)
+        .post("/companies")
+        .send(newCompany);
+    expect(resp.statusCode).toEqual(401);
   });
 
   test("bad request with invalid data", async function () {
@@ -96,6 +112,100 @@ describe("GET /companies", function () {
     });
   });
 
+    test('fails: min bigger than max', async function () {
+      try {
+        const resp = await request(app).get("/companies").query({minEmployees: 10, maxEmployees: 5});
+      } catch (err) {
+        expect(err instanceof BadRequestError).toBeTruthy();
+      }
+    });
+  
+    test('fails: bad filter criteria', async function () {
+      try {
+        const resp = await request(app).get("/companies").query({badfilter: 'foo'});
+      } catch (err) {
+        expect(err instanceof BadRequestError).toBeTruthy();
+      }
+    });
+
+    test('correct filter by numEmployees', async function () {
+      const resp = await request(app).get("/companies").query({minEmployees: 2, maxEmployees: 3});
+      expect(resp.body).toEqual({
+        companies:
+            [{
+        handle: "c2",
+        name: "C2",
+        description: "Desc2",
+        numEmployees: 2,
+        logoUrl: "http://c2.img",
+      },
+      {
+        handle: "c3",
+        name: "C3",
+        description: "Desc3",
+        numEmployees: 3,
+        logoUrl: "http://c3.img",
+      },]})
+    });
+
+    test('correct filter minEmployees', async function () {
+      const resp = await request(app).get("/companies").query({minEmployees: 2});
+      expect(resp.body).toEqual({
+        companies:
+            [
+              {
+                handle: "c2",
+                name: "C2",
+                description: "Desc2",
+                numEmployees: 2,
+                logoUrl: "http://c2.img",
+              },
+              {
+                handle: "c3",
+                name: "C3",
+                description: "Desc3",
+                numEmployees: 3,
+                logoUrl: "http://c3.img",
+              },
+            ],
+      })
+    });
+
+    test('correct filter maxEmployees', async function () {
+      const resp = await request(app).get("/companies").query({maxEmployees: 2});
+      expect(resp.body).toEqual({
+        companies:
+            [
+              {
+                handle: "c1",
+                name: "C1",
+                description: "Desc1",
+                numEmployees: 1,
+                logoUrl: "http://c1.img",
+              },
+              {
+                handle: "c2",
+                name: "C2",
+                description: "Desc2",
+                numEmployees: 2,
+                logoUrl: "http://c2.img",
+              },]})
+    });
+
+    test('correct filter name', async function () {
+      const resp = await request(app).get("/companies").query({name: '1'});
+      expect(resp.body).toEqual({
+        companies:
+            [
+              {
+                handle: "c1",
+                name: "C1",
+                description: "Desc1",
+                numEmployees: 1,
+                logoUrl: "http://c1.img",
+              },]})
+    });
+
   test("fails: test next() handler", async function () {
     // there's no normal failure event which will cause this route to fail ---
     // thus making it hard to test that the error-handler works with it. This
@@ -120,6 +230,10 @@ describe("GET /companies/:handle", function () {
         description: "Desc1",
         numEmployees: 1,
         logoUrl: "http://c1.img",
+        jobs: [
+          { id: expect.any(Number), title: "j1", equity: "1", salary: 20000, company_handle: "c1" },
+          { id: expect.any(Number), title: "j2", equity: "0", salary: 40000, company_handle: "c1" }
+        ],
       },
     });
   });
@@ -133,6 +247,7 @@ describe("GET /companies/:handle", function () {
         description: "Desc2",
         numEmployees: 2,
         logoUrl: "http://c2.img",
+        jobs: []
       },
     });
   });
@@ -146,7 +261,7 @@ describe("GET /companies/:handle", function () {
 /************************************** PATCH /companies/:handle */
 
 describe("PATCH /companies/:handle", function () {
-  test("works for users", async function () {
+  test("works for admin", async function () {
     const resp = await request(app)
         .patch(`/companies/c1`)
         .send({
@@ -162,6 +277,16 @@ describe("PATCH /companies/:handle", function () {
         logoUrl: "http://c1.img",
       },
     });
+  });
+
+  test("unauth for non-admin user", async function () {
+    const resp = await request(app)
+        .patch(`/companies/c1`)
+        .send({
+          name: "C1-new",
+        })
+        .set("authorization", `Bearer ${u2Token}`);;
+    expect(resp.statusCode).toEqual(401);
   });
 
   test("unauth for anon", async function () {
@@ -207,7 +332,7 @@ describe("PATCH /companies/:handle", function () {
 /************************************** DELETE /companies/:handle */
 
 describe("DELETE /companies/:handle", function () {
-  test("works for users", async function () {
+  test("works for admin", async function () {
     const resp = await request(app)
         .delete(`/companies/c1`)
         .set("authorization", `Bearer ${u1Token}`);
@@ -217,6 +342,13 @@ describe("DELETE /companies/:handle", function () {
   test("unauth for anon", async function () {
     const resp = await request(app)
         .delete(`/companies/c1`);
+    expect(resp.statusCode).toEqual(401);
+  });
+
+  test("unauth for non-admin user", async function () {
+    const resp = await request(app)
+        .delete(`/companies/c1`)
+        .set("authorization", `Bearer ${u2Token}`);
     expect(resp.statusCode).toEqual(401);
   });
 

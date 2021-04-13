@@ -24,10 +24,10 @@ describe("POST /auth/token", function () {
         .post("/auth/token")
         .send({
           username: "u1",
-          password: "password1",
+          password: "password1"
         });
     expect(resp.body).toEqual({
-      "token": expect.any(String),
+      "token": expect.any(String)
     });
   });
 

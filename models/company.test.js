@@ -85,6 +85,88 @@ describe("findAll", function () {
       },
     ]);
   });
+
+  test('works: with filter', async function () {
+    const criteria = {minEmployees: 2, maxEmployees: 20, name: '3'}
+    let companies = await Company.findAll(criteria);
+    expect(companies).toEqual([{
+      handle: "c3",
+      name: "C3",
+      description: "Desc3",
+      numEmployees: 3,
+      logoUrl: "http://c3.img",
+    }])
+  });
+
+  test('works: name filter', async function () {
+    const criteria = {name: 'C2'};
+    let companies = await Company.findAll(criteria);
+    expect(companies).toEqual([{
+      handle: "c2",
+      name: "C2",
+      description: "Desc2",
+      numEmployees: 2,
+      logoUrl: "http://c2.img",
+    }])
+  });
+
+  test('works: numEmployees filter', async function() {
+    const criteria = {maxEmployees: 2, minEmployees: 1};
+    let companies = await Company.findAll(criteria);
+    expect(companies).toEqual([{
+      handle: "c1",
+      name: "C1",
+      description: "Desc1",
+      numEmployees: 1,
+      logoUrl: "http://c1.img",
+    },
+    {
+      handle: "c2",
+      name: "C2",
+      description: "Desc2",
+      numEmployees: 2,
+      logoUrl: "http://c2.img",
+    }])
+  });
+
+  test('works: maxEmployees filter', async function() {
+    const criteria = {maxEmployees: 2};
+    let companies = await Company.findAll(criteria);
+    expect(companies).toEqual([{
+      handle: "c1",
+      name: "C1",
+      description: "Desc1",
+      numEmployees: 1,
+      logoUrl: "http://c1.img",
+    },
+    {
+      handle: "c2",
+      name: "C2",
+      description: "Desc2",
+      numEmployees: 2,
+      logoUrl: "http://c2.img",
+    }])
+  });
+
+  test('works: minEmployees filter', async function() {
+    const criteria = {minEmployees: 2};
+    let companies = await Company.findAll(criteria);
+    expect(companies).toEqual([{
+      handle: "c2",
+      name: "C2",
+      description: "Desc2",
+      numEmployees: 2,
+      logoUrl: "http://c2.img",
+    },
+    {
+      handle: "c3",
+      name: "C3",
+      description: "Desc3",
+      numEmployees: 3,
+      logoUrl: "http://c3.img",
+    },])
+  });
+
 });
 
 /************************************** get */
@@ -98,6 +180,23 @@ describe("get", function () {
       description: "Desc1",
       numEmployees: 1,
       logoUrl: "http://c1.img",
+      jobs: [
+             {
+               company_handle: "c1",
+               equity: "1",
+               id: expect.any(Number),
+               salary: 20000,
+               title: "j1",
+             },
+             {
+               company_handle: "c1",
+               equity: "0",
+               id: expect.any(Number),
+               salary: 40000,
+               title: "j2",
+             },
+           ]
+    
     });
   });
 

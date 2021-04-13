@@ -12,6 +12,7 @@ const {
   commonBeforeEach,
   commonAfterEach,
   commonAfterAll,
+  testIds
 } = require("./_testCommon");
 
 beforeAll(commonBeforeAll);
@@ -29,7 +30,7 @@ describe("authenticate", function () {
       firstName: "U1F",
       lastName: "U1L",
       email: "u1@email.com",
-      isAdmin: false,
+      isAdmin: true,
     });
   });
 
@@ -116,7 +117,7 @@ describe("findAll", function () {
         firstName: "U1F",
         lastName: "U1L",
         email: "u1@email.com",
-        isAdmin: false,
+        isAdmin: true,
       },
       {
         username: "u2",
@@ -139,7 +140,8 @@ describe("get", function () {
       firstName: "U1F",
       lastName: "U1L",
       email: "u1@email.com",
-      isAdmin: false,
+      isAdmin: true,
+      jobs: []
     });
   });
 
@@ -164,23 +166,23 @@ describe("update", function () {
   };
 
   test("works", async function () {
-    let job = await User.update("u1", updateData);
-    expect(job).toEqual({
+    let user = await User.update("u1", updateData);
+    expect(user).toEqual({
       username: "u1",
       ...updateData,
     });
   });
 
   test("works: set password", async function () {
-    let job = await User.update("u1", {
+    let user = await User.update("u1", {
       password: "new",
     });
-    expect(job).toEqual({
+    expect(user).toEqual({
       username: "u1",
       firstName: "U1F",
       lastName: "U1L",
       email: "u1@email.com",
-      isAdmin: false,
+      isAdmin: true,
     });
     const found = await db.query("SELECT * FROM users WHERE username = 'u1'");
     expect(found.rows.length).toEqual(1);
@@ -228,3 +230,30 @@ describe("remove", function () {
     }
   });
 });
+
+/***************************************** apply */
+
+describe("apply", function () {
+  test("works", async function () {
+    const result = await User.apply("u1", testIds[0]);
+    expect(result).toEqual({job_id: testIds[0]});
+  });
+
+  test("error on bad request", async function () {
+    try {
+      await User.apply("u1", "nope");
+    } catch (err) {
+      expect(err).toBeTruthy();
+    }
+  });
+
+  test("error on duplicate request", async function () {
+    try {
+      await User.apply("u1", testIds[0]);
+      await User.apply("u1", testIds[0]);
+      fail();
+    } catch (err) {
+      expect(err instanceof BadRequestError).toBeTruthy();
+    }
+  });
+})

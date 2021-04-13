@@ -45,19 +45,40 @@ class Company {
   }
 
   /** Find all companies.
+   * Optional filter criteria to limit by name of company or number of employees
    *
    * Returns [{ handle, name, description, numEmployees, logoUrl }, ...]
+   * 
    * */
 
-  static async findAll() {
-    const companiesRes = await db.query(
-          `SELECT handle,
-                  name,
-                  description,
-                  num_employees AS "numEmployees",
-                  logo_url AS "logoUrl"
-           FROM companies
-           ORDER BY name`);
+  static async findAll(criteria = {}) {
+    let baseQuery = `SELECT handle,
+    name,
+    description,
+    num_employees AS "numEmployees",
+    logo_url AS "logoUrl"
+    FROM companies`;
+    let fields = [];
+    let values = [];
+    const { minEmployees, maxEmployees, name } = criteria;
+
+    if (minEmployees !== undefined) {
+      values.push(minEmployees);
+      fields.push(`num_employees >= $${values.length}`);
+    }
+    if (maxEmployees !== undefined) {
+      values.push(maxEmployees);
+      fields.push(`num_employees <= $${values.length}`);
+    }
+    if (name) {
+      values.push(`%${name}%`);
+      fields.push(`name ILIKE $${values.length}`);
+    }
+    if (fields.length > 0) {
+      baseQuery += " WHERE " + fields.join(" AND ");
+    }
+    baseQuery += " ORDER BY name";
+    const companiesRes = await db.query(baseQuery, values);
     return companiesRes.rows;
   }
 
@@ -79,10 +100,21 @@ class Company {
            FROM companies
            WHERE handle = $1`,
         [handle]);
-
+    const jobRes = await db.query(
+          `SELECT id,
+                  title,
+                  salary,
+                  equity,
+                  company_handle
+          FROM jobs
+          WHERE company_handle = $1`,
+          [handle]);
+    
     const company = companyRes.rows[0];
+    if (!company) {throw new NotFoundError(`No company: ${handle}`);}
+    company.jobs = jobRes.rows;
 
-    if (!company) throw new NotFoundError(`No company: ${handle}`);
+    
 
     return company;
   }
@@ -119,7 +151,7 @@ class Company {
     const result = await db.query(querySql, [...values, handle]);
     const company = result.rows[0];
 
-    if (!company) throw new NotFoundError(`No company: ${handle}`);
+    if (!company) {throw new NotFoundError(`No company: ${handle}`);}
 
     return company;
   }
@@ -138,9 +170,8 @@ class Company {
         [handle]);
     const company = result.rows[0];
 
-    if (!company) throw new NotFoundError(`No company: ${handle}`);
+    if (!company) {throw new NotFoundError(`No company: ${handle}`);}
   }
 }
-
 
 module.exports = Company;

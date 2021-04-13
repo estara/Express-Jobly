@@ -138,7 +138,13 @@ class User {
     const user = userRes.rows[0];
 
     if (!user) throw new NotFoundError(`No user: ${username}`);
+    
+    const userApplicationsRes = await db.query(
+      `SELECT a.job_id
+       FROM applications AS a
+       WHERE a.username = $1`, [username]);
 
+    user.jobs = userApplicationsRes.rows.map(a => a.job_id);
     return user;
   }
 
@@ -184,7 +190,7 @@ class User {
     const result = await db.query(querySql, [...values, username]);
     const user = result.rows[0];
 
-    if (!user) throw new NotFoundError(`No user: ${username}`);
+    if (!user) {throw new NotFoundError(`No user: ${username}`);}
 
     delete user.password;
     return user;
@@ -203,6 +209,35 @@ class User {
     const user = result.rows[0];
 
     if (!user) throw new NotFoundError(`No user: ${username}`);
+  }
+
+  /**Submit user as applicant for job
+ * 
+ * Returns job_id applied for
+ */
+  static async apply(user, jobId) {
+    const duplicateCheck = await db.query(
+      `SELECT job_id
+       FROM applications
+       WHERE username = $1 AND job_id = $2`,
+    [user, jobId]);
+
+if (duplicateCheck.rows[0]) {
+  throw new BadRequestError(`Duplicate application: ${jobId}`);}
+
+    let result = await db.query(
+      `INSERT INTO applications
+      (username, job_id)
+      VALUES
+      ($1, $2)
+      RETURNING 
+      job_id`, 
+      [user, jobId]
+    )
+
+    const applied = result.rows[0];
+    
+    return applied
   }
 }
 
